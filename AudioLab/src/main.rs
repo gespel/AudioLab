@@ -22,8 +22,8 @@ fn main() {
     fn write_silence<T: Sample>(data: &mut [T], _: &cpal::OutputCallbackInfo) {
         let mut phase: f32 = 0.0;
         for sample in data.iter_mut() {
-            
-            *sample = Sample::from(&x);
+            *sample = Sample::from(&(phase.sin()*0.1));
+            phase += ((220.0) / 48000.0) * 2.0 * 3.14159265;
         }
     }
     stream.play().unwrap();
