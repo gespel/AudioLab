@@ -35,16 +35,20 @@ impl MainHandle {
 
         let err_fn = |err| eprintln!("an error occurred on stream: {}", err);
         
-        let mut synth1 = synths::sine_synth::SineSynth::new(440.0, sample_rate);
-        let mut synth2 = synths::sine_synth::SineSynth::new(4.0, sample_rate);
+        let mut synth1 = synths::sine_synth::SineSynth::new(880.0, sample_rate);
+        let mut synth2 = synths::sine_synth::SineSynth::new(5.0, sample_rate);
+        let mut synth3 = synths::sine_synth::SineSynth::new(3.0, sample_rate);
+        let mut synth4 = synths::sine_synth::SineSynth::new(0.1, sample_rate);
         
         // Build an output stream
         let stream = device.build_output_stream(
             config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 for frame in data.chunks_mut(channels) {
-                    let x = synth1.getSample();
+                    let x = synth1.getSample()*3.0;
                     synth1.setFrequency(synth2.getSample()*2000.0);
+                    synth2.setFrequency(synth3.getSample()*1000.0);
+                    synth3.setFrequency(synth4.getSample()*4000.0);
                     let value: T = cpal::Sample::from::<f32>(&x);
                     for sample in frame.iter_mut() {
                         *sample = value;
