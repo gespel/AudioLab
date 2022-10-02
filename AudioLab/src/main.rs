@@ -1,55 +1,70 @@
 pub mod synths;
 
-use std::ops::Sub;
-use cpal::{Data, Sample, SampleFormat};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use rand::Rng;
-use std::thread;
 
 
 struct MainHandle {
     pub synth1: synths::sine_synth::SineSynth
 }
 impl MainHandle {
-    fn write_silence<T: Sample>(&mut self, synth1: synths::sine_synth::SineSynth, data: &mut [T], _: &cpal::OutputCallbackInfo) {
-        let mut synth1: synths::sine_synth::SineSynth = synths::sine_synth::SineSynth::new(440.0);
-
-        for sample in data.iter_mut() {
-            *sample = Sample::from(&(synth1.getSample()));
-            //println!("{}", phase.sin())
-        }
-    }
-    pub fn run(&mut self) {
+    
+    pub fn init(&mut self) {
         let host = cpal::default_host();
         let device = host.default_output_device().expect("no output device available");
-        let mut supported_configs_range = device.supported_output_configs()
-            .expect("error while querying configs");
-        let supported_config = supported_configs_range.next()
-            .expect("no supported config?!")
-            .with_max_sample_rate();
-        let err_fn = |err| eprintln!("an error occurred on the output audio stream: {}", err);
-        let sample_format = supported_config.sample_format();
-        let config = supported_config.into();
-        let stream = match sample_format {
-            SampleFormat::F32 => device.build_output_stream(&config, Sample {
-                self.synth1.getSample()
-            }, err_fn),
-            SampleFormat::I16 => device.build_output_stream(&config, write_silence::<i16>, err_fn),
-            SampleFormat::U16 => device.build_output_stream(&config, write_silence::<u16>, err_fn),
-        }.unwrap();
-        let mut synth1: synths::sine_synth::SineSynth = synths::sine_synth::SineSynth::new(440.0);
+        let config = device.default_output_config().unwrap();
+        match config.sample_format() {
+            cpal::SampleFormat::F32 => {
+                self.run::<f32>(&device, &config.into()).unwrap();
+            }
+    
+            cpal::SampleFormat::I16 => {
+                self.run::<i16>(&device, &config.into()).unwrap();
+            }
+                
+            cpal::SampleFormat::U16 => {
+                self.run::<u16>(&device, &config.into()).unwrap();
+            }    
+        }
 
+    }
+    fn run<T>(&mut self, device: &cpal::Device, config: &cpal::StreamConfig) -> Result<(), anyhow::Error> where T: cpal::Sample {
 
-        stream.play().unwrap();
+        // Get the sample rate and channels number from the config
+        let sample_rate = config.sample_rate.0 as f32;
+        let channels = config.channels as usize;
+
+        let err_fn = |err| eprintln!("an error occurred on stream: {}", err);
+        
+        let mut synth1 = synths::sine_synth::SineSynth::new(440.0, sample_rate);
+        
+        // Build an output stream
+        let stream = device.build_output_stream(
+            config,
+            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
+                for frame in data.chunks_mut(channels) {
+                    let value: T = cpal::Sample::from::<f32>(&synth1.getSample());
+                    
+                    for sample in frame.iter_mut() {
+                        *sample = value;
+                    }
+                }
+            },
+            err_fn,
+        )?;
+
+        // Play the stream
+        stream.play()?;
+        
+        // Park the thread so our noise plays continuously until the app is closed
         loop {
-            let x = synths::sine_synth::SineSynth::new(440.0);
+
         }
     }
 }
 
 fn main() {
     let mut x = MainHandle {
-        synth1: synths::sine_synth::SineSynth::new(440.0)
+        synth1: synths::sine_synth::SineSynth::new(440.0, 48000.0)
     };
-    x.run();
+    x.init();
 }

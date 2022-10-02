@@ -5,15 +5,15 @@ pub mod sine_synth {
         phase: f32
     }
     impl SineSynth {
-        pub fn new(freq: f32) -> SineSynth {
+        pub fn new(freq: f32, sample_rate: f32) -> SineSynth {
             SineSynth {
-                sample_rate: 3.0,
+                sample_rate: sample_rate,
                 freq: freq,
                 phase: 0.0
             }
         }
         pub fn getSample(&mut self) -> f32 {
-            self.phase += ((220.0) / 48000.0) * 2.0 * 3.14159265;
+            self.phase += ((self.freq) / self.sample_rate) * 2.0 * 3.14159265;
             self.phase.sin()*0.1
         }
     }
