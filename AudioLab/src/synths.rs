@@ -16,5 +16,8 @@ pub mod sine_synth {
             self.phase += ((self.freq) / self.sample_rate) * 2.0 * 3.14159265;
             self.phase.sin()*0.1
         }
+        pub fn setFrequency(&mut self, freq: f32) {
+            self.freq = freq;
+        }
     }
 }
